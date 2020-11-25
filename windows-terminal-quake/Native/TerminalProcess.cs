@@ -10,6 +10,10 @@ namespace WindowsTerminalQuake.Native
 {
 	public static class TerminalProcess
 	{
+		public static string ProcessName { get; set; }
+
+		public static string ExeName { get; set; }
+
 		private static readonly RetryPolicy Retry = Policy
 			.Handle<Exception>()
 			.WaitAndRetry(new[]
@@ -57,17 +61,14 @@ namespace WindowsTerminalQuake.Native
 
 		private static Process GetOrCreate()
 		{
-			const string existingProcessName = "WindowsTerminal";
-			const string newProcessName = "wt.exe";
-
-			var process = Process.GetProcessesByName(existingProcessName).FirstOrDefault();
+			var process = Process.GetProcessesByName(ProcessName).FirstOrDefault();
 			if (process == null)
 			{
 				process = new Process
 				{
 					StartInfo = new ProcessStartInfo
 					{
-						FileName = newProcessName,
+						FileName = ExeName,
 						WindowStyle = ProcessWindowStyle.Maximized
 					}
 				};
@@ -95,7 +96,7 @@ namespace WindowsTerminalQuake.Native
 			if (process.MainWindowHandle == IntPtr.Zero) throw new Exception("Main window handle no accessible.");
 
 			// Make sure the process name equals "WindowsTerminal", otherwise WT might still be starting
-			if (process.ProcessName != "WindowsTerminal") throw new Exception("Process name is not 'WindowsTerminal' yet.");
+			if (process.ProcessName != ProcessName) throw new Exception($"Process name is not {ProcessName} yet.");
 
 			// We need a proper window title before we can continue
 			if (process.MainWindowTitle == "")

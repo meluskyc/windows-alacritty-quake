@@ -22,11 +22,12 @@ namespace WindowsTerminalQuake
 			{
 				TerminalProcess.OnExit(() => Close());
 
-				_toggler = new Toggler();
-
 				// Transparency
 				Settings.Get(s =>
 				{
+					TerminalProcess.ProcessName = s.ProcessName ?? "alacritty";
+					TerminalProcess.ExeName = s.ExeName ?? "alacritty.exe";
+					_toggler = new Toggler();
 					TransparentWindow.SetTransparent(TerminalProcess.Get(), s.Opacity);
 				});
 
