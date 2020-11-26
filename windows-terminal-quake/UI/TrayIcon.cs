@@ -20,13 +20,13 @@ namespace WindowsTerminalQuake.UI
 
 			var notifyThread = new Thread(delegate ()
 			{
-				var contextMenu = new ContextMenu();
+				var contextMenu = new ContextMenuStrip();
 
 				// Exit
-				var mnuExit = new MenuItem("Exit");
+				var mnuExit = new ToolStripMenuItem("Exit");
 				mnuExit.Click += new EventHandler(exitHandler);
 
-				contextMenu.MenuItems.AddRange(new[]
+				contextMenu.Items.AddRange(new[]
 				{
 					mnuExit
 				});
@@ -35,7 +35,7 @@ namespace WindowsTerminalQuake.UI
 				_notificationIcon = new NotifyIcon()
 				{
 					Icon = CreateIcon(),
-					ContextMenu = contextMenu,
+					ContextMenuStrip = contextMenu,
 					Text = "Windows Terminal Quake",
 					Visible = true
 				};
