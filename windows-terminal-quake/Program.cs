@@ -1,5 +1,6 @@
-﻿using Serilog;
+using Serilog;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Forms;
 using WindowsTerminalQuake.Native;
@@ -12,6 +13,22 @@ namespace WindowsTerminalQuake
 		private static Toggler _toggler;
 		private static TrayIcon _trayIcon;
 
+		public static string GetVersion()
+		{
+			try
+			{
+				var ass = typeof(Program).Assembly;
+				var ver = FileVersionInfo.GetVersionInfo(ass.Location);
+
+				return ver.FileVersion;
+			}
+			catch (Exception ex)
+			{
+				Log.Error(ex, $"Could not get app version: {ex.Message}");
+				return "(could not get version)";
+			}
+		}
+
 		public static void Main(string[] args)
 		{
 			Logging.Configure();
@@ -22,13 +39,14 @@ namespace WindowsTerminalQuake
 			{
 				TerminalProcess.OnExit(() => Close());
 
+
 				// Transparency
 				Settings.Get(s =>
 				{
 					TerminalProcess.ProcessName = s.ProcessName ?? "alacritty";
 					TerminalProcess.ExeName = s.ExeName ?? "alacritty.exe";
-					_toggler = new Toggler();
-					TransparentWindow.SetTransparent(TerminalProcess.Get(), s.Opacity);
+					_toggler = new Toggler(args);
+					TransparentWindow.SetTransparent(TerminalProcess.Get(args), s.Opacity);
 				});
 
 				var hks = string.Join(" or ", Settings.Instance.Hotkeys.Select(hk => $"{hk.Modifiers}+{hk.Key}"));

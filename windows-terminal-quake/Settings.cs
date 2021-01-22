@@ -18,7 +18,7 @@ namespace WindowsTerminalQuake
 		public static readonly string[] PathsToSettings = new[]
 		{
 			Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "windows-terminal-quake.json"),
-			Path.Combine(Path.GetDirectoryName(new Uri(typeof(Settings).Assembly.Location).AbsolutePath), "windows-terminal-quake.json"),
+			Path.Combine(Path.GetDirectoryName(new Uri(typeof(Settings).Assembly.Location).LocalPath), "windows-terminal-quake.json"),
 		};
 
 		public static SettingsDto Instance { get; private set; } = new SettingsDto();
@@ -137,15 +137,23 @@ namespace WindowsTerminalQuake
 
 		public int ToggleDurationMs { get; set; } = 250;
 
+		public int ToggleAnimationFrameTimeMs { get; set; } = 25;
+
 		public bool Logging { get; set; } = false;
 
 		public bool HideOnFocusLost { get; set; } = true;
 
-		public bool AlwaysOnTop { get; set; }
-
 		public string? ProcessName { get; set; }
 
 		public string? ExeName { get; set; }
+
+		public bool AlwaysOnTop { get; set; } = false;
+
+		public bool StartHidden { get; set; } = false;
+
+		public PreferMonitor PreferMonitor { get; set; } = PreferMonitor.WithCursor;
+
+		public int MonitorIndex { get; set; }
 	}
 
 	public class Hotkey
@@ -160,5 +168,12 @@ namespace WindowsTerminalQuake
 		Center = 0,
 		Left,
 		Right
+	}
+
+	public enum PreferMonitor
+	{
+		WithCursor = 0,
+		AtIndex,
+		Primary,
 	}
 }

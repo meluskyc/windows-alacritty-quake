@@ -7,17 +7,21 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WindowsTerminalQuake.Native;
+using WindowsTerminalQuake.UI;
 
 namespace WindowsTerminalQuake
 {
 	public class Toggler : IDisposable
 	{
-		private Process _process => TerminalProcess.Get();
+		private Process _process => TerminalProcess.Get(_args);
 
+		private string[] _args;
 		private readonly List<int> _registeredHotKeys = new List<int>();
 
-		public Toggler()
+		public Toggler(string[] args)
 		{
+			_args = args;
+
 			// Always on top
 			if (Settings.Instance.AlwaysOnTop) TopMostWindow.SetTopMost(_process);
 
@@ -32,6 +36,8 @@ namespace WindowsTerminalQuake
 			// Register hotkeys
 			Settings.Get(s =>
 			{
+				if (s.Hotkeys == null) return; // Hotkeys not loaded yet
+
 				_registeredHotKeys.ForEach(hk => HotKeyManager.UnregisterHotKey(hk));
 				_registeredHotKeys.Clear();
 
@@ -43,6 +49,7 @@ namespace WindowsTerminalQuake
 				});
 			});
 
+			// Hide on focus lost
 			FocusTracker.OnFocusLost += (s, a) =>
 			{
 				if (Settings.Instance.HideOnFocusLost && isOpen)
@@ -52,17 +59,24 @@ namespace WindowsTerminalQuake
 				}
 			};
 
+			// Toggle on hotkey(s)
 			HotKeyManager.HotKeyPressed += (s, a) =>
 			{
 				Toggle(!isOpen, Settings.Instance.ToggleDurationMs);
 				isOpen = !isOpen;
 			};
+
+			// Start hidden?
+			if (Settings.Instance.StartHidden) Toggle(isOpen = false, 0);
 		}
 
 		public void Toggle(bool open, int durationMs)
 		{
-			var stepCount = (int)Math.Max(Math.Ceiling(durationMs / 25f), 1f);
-			var stepDelayMs = durationMs / stepCount;
+			// StepDelayMS needs to be at least 15, due to the resolution of Task.Delay()
+			var stepDelayMs = Math.Max(15, Settings.Instance.ToggleAnimationFrameTimeMs);
+
+			var stepCount = durationMs / stepDelayMs;
+
 			var screen = GetScreenWithCursor();
 
 			// Close
@@ -114,15 +128,19 @@ namespace WindowsTerminalQuake
 
 		public Rectangle GetBounds(Screen screen, int stepCount, int step)
 		{
+			if (screen == null) throw new ArgumentNullException(nameof(screen));
+
+			var settings = Settings.Instance ?? throw new InvalidOperationException($"Settings.Instance was null");
+
 			var bounds = screen.Bounds;
 
 			var scrWidth = bounds.Width;
-			var horWidthPct = (float)Settings.Instance.HorizontalScreenCoverage;
+			var horWidthPct = (float)settings.HorizontalScreenCoverage;
 
 			var horWidth = (int)Math.Ceiling(scrWidth / 100f * horWidthPct);
 			var x = 0;
 
-			switch (Settings.Instance.HorizontalAlign)
+			switch (settings.HorizontalAlign)
 			{
 				case HorizontalAlign.Left:
 					x = bounds.X;
@@ -138,12 +156,12 @@ namespace WindowsTerminalQuake
 					break;
 			}
 
-			bounds.Height = (int)Math.Ceiling((bounds.Height / 100f) * Settings.Instance.VerticalScreenCoverage);
-			bounds.Height += Settings.Instance.VerticalOffset;
+			bounds.Height = (int)Math.Ceiling((bounds.Height / 100f) * settings.VerticalScreenCoverage);
+			bounds.Height += settings.VerticalOffset;
 
 			return new Rectangle(
 				x,
-				bounds.Y + -bounds.Height + (bounds.Height / stepCount * step) + Settings.Instance.VerticalOffset,
+				bounds.Y + -bounds.Height + (bounds.Height / stepCount * step) + settings.VerticalOffset,
 				horWidth,
 				bounds.Height
 			);
@@ -156,7 +174,42 @@ namespace WindowsTerminalQuake
 
 		private static Screen GetScreenWithCursor()
 		{
-			return Screen.AllScreens.FirstOrDefault(s => s.Bounds.Contains(Cursor.Position));
+			var settings = Settings.Instance;
+			if (settings == null) return Screen.PrimaryScreen; // Should not happen
+
+			var scr = Screen.AllScreens;
+
+			switch (settings.PreferMonitor)
+			{
+				// At Index
+				case PreferMonitor.AtIndex:
+					// Make sure the monitor index is within bounds
+					if (settings.MonitorIndex < 0)
+					{
+						TrayIcon.Instance.Notify(ToolTipIcon.Warning, $"Setting '{nameof(Settings.Instance.MonitorIndex)}' must be greater than or equal to 0.");
+						return Screen.PrimaryScreen;
+					}
+
+					if (settings.MonitorIndex >= scr.Length)
+					{
+						TrayIcon.Instance.Notify(ToolTipIcon.Warning, $"Setting '{nameof(Settings.Instance.MonitorIndex)}' ({settings.MonitorIndex}) must be less than the monitor count ({scr.Length}).");
+						return Screen.PrimaryScreen;
+					}
+
+					return scr[settings.MonitorIndex];
+
+				// Primary
+				case PreferMonitor.Primary:
+					return Screen.PrimaryScreen;
+
+				// With Cursor
+				default:
+				case PreferMonitor.WithCursor:
+					return Screen.AllScreens
+						.FirstOrDefault(s => s.Bounds.Contains(Cursor.Position))
+						?? Screen.PrimaryScreen
+					;
+			}
 		}
 
 		private static void ResetTerminal(Process process)

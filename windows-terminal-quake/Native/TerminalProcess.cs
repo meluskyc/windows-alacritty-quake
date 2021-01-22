@@ -44,7 +44,7 @@ namespace WindowsTerminalQuake.Native
 			_onExit.ForEach(a => a());
 		}
 
-		public static Process Get()
+		public static Process Get(string[] args)
 		{
 			return Retry.Execute(() =>
 			{
@@ -52,14 +52,14 @@ namespace WindowsTerminalQuake.Native
 
 				if (_process == null || _process.HasExited)
 				{
-					_process = GetOrCreate();
+					_process = GetOrCreate(args);
 				}
 
 				return _process;
 			});
 		}
 
-		private static Process GetOrCreate()
+		private static Process GetOrCreate(string[] args)
 		{
 			var process = Process.GetProcessesByName(ProcessName).FirstOrDefault();
 			if (process == null)
@@ -69,6 +69,8 @@ namespace WindowsTerminalQuake.Native
 					StartInfo = new ProcessStartInfo
 					{
 						FileName = ExeName,
+						Arguments = string.Join(" ", args),
+						UseShellExecute = false,
 						WindowStyle = ProcessWindowStyle.Maximized
 					}
 				};
