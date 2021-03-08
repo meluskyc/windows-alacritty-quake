@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -29,11 +29,13 @@ namespace WindowsTerminalQuake.Native
 		private static void RegisterHotKeyInternal(IntPtr hwnd, int id, uint modifiers, uint key)
 		{
 			RegisterHotKey(hwnd, id, modifiers, key);
+			User32.ThrowIfError();
 		}
 
 		private static void UnRegisterHotKeyInternal(IntPtr hwnd, int id)
 		{
 			UnregisterHotKey(_hwnd, id);
+			User32.ThrowIfError();
 		}
 
 		private static void OnHotKeyPressed(HotKeyEventArgs e)
